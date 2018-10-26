@@ -11,14 +11,16 @@ use Magento\Eav\Api\Data\AttributeOptionInterface;
 use Magento\Eav\Api\Data\AttributeOptionLabelInterface;
 use Magento\Eav\Api\Data\AttributeOptionLabelInterfaceFactory;
 use Magento\Framework\App\State as AppState;
+use Magento\Framework\App\ResourceConnection;
 use Magento\Framework\Exception\LocalizedException;
 use Magento\Framework\Phrase;
 use VinaiKopp\EavOptionSetup\Setup\EavOptionSetup;
+use PHPUnit\Framework\TestCase;
 
 /**
  * @covers \VinaiKopp\EavOptionSetup\Setup\EavOptionSetup
  */
-class EavOptionSetupTest extends \PHPUnit_Framework_TestCase
+class EavOptionSetupTest extends TestCase
 {
     /**
      * @var EavOptionSetup
@@ -50,6 +52,12 @@ class EavOptionSetupTest extends \PHPUnit_Framework_TestCase
      */
     private $mockAppState;
 
+
+    /**
+     * @var ResourceConnection|\PHPUnit_Framework_MockObject_MockObject
+     */
+    private $mockResourceConnection;
+
     /**
      * @param string $testLabel
      * @param int $testSortOrder
@@ -57,7 +65,7 @@ class EavOptionSetupTest extends \PHPUnit_Framework_TestCase
      */
     private function createMockOptionLabel($testLabel, $testSortOrder)
     {
-        $mockOption = $this->getMock(AttributeOptionInterface::class);
+        $mockOption = $this->createMock(AttributeOptionInterface::class);
         $mockOption->method('getLabel')->willReturn($testLabel);
         $mockOption->method('getSortOrder')->willReturn($testSortOrder);
         return $mockOption;
@@ -66,14 +74,14 @@ class EavOptionSetupTest extends \PHPUnit_Framework_TestCase
     private function setSpecifiedAttributeExistsFixture()
     {
         $dummyAttributeId = 111;
-        $mockAttribute = $this->getMock(AttributeInterface::class);
+        $mockAttribute = $this->createMock(AttributeInterface::class);
         $mockAttribute->method('getAttributeId')->willReturn($dummyAttributeId);
         $this->mockAttributeRepository->method('get')->willReturn($mockAttribute);
     }
 
     private function expectNewOptionWithStoreLabelToBeCreated()
     {
-        $mockOption = $this->getMock(AttributeOptionInterface::class);
+        $mockOption = $this->createMock(AttributeOptionInterface::class);
         $mockOption->expects($this->once())->method('setStoreLabels')->willReturnCallback(function ($args) {
             $this->assertInternalType('array', $args);
             $this->assertCount(1, $args);
@@ -84,9 +92,9 @@ class EavOptionSetupTest extends \PHPUnit_Framework_TestCase
 
     protected function setUp()
     {
-        $this->mockAttributeRepository = $this->getMock(AttributeRepositoryInterface::class);
-        $this->mockAttributeOptionManagementService = $this->getMock(AttributeOptionManagementInterface::class);
-        $this->mockAttributeOptionFactory = $this->getMock(
+        $this->mockAttributeRepository = $this->createMock(AttributeRepositoryInterface::class);
+        $this->mockAttributeOptionManagementService = $this->createMock(AttributeOptionManagementInterface::class);
+        $this->mockAttributeOptionFactory = $this->createMock(
             AttributeOptionInterfaceFactory::class,
             ['create'],
             [],
@@ -94,7 +102,7 @@ class EavOptionSetupTest extends \PHPUnit_Framework_TestCase
             false
         );
 
-        $this->mockAttributeOptionLabelFactory = $this->getMock(
+        $this->mockAttributeOptionLabelFactory = $this->createMock(
             AttributeOptionLabelInterfaceFactory::class,
             ['create'],
             [],
@@ -102,14 +110,17 @@ class EavOptionSetupTest extends \PHPUnit_Framework_TestCase
             false
         );
 
-        $this->mockAppState = $this->getMock(AppState::class, [], [], '', false);
+        $this->mockAppState = $this->createMock(AppState::class, [], [], '', false);
+
+        $this->mockResourceConnection = $this->createMock(ResourceConnection::class);
 
         $this->optionSetup = new EavOptionSetup(
             $this->mockAttributeRepository,
             $this->mockAttributeOptionManagementService,
             $this->mockAttributeOptionFactory,
             $this->mockAttributeOptionLabelFactory,
-            $this->mockAppState
+            $this->mockAppState,
+            $this->mockResourceConnection
         );
     }
 
@@ -118,7 +129,7 @@ class EavOptionSetupTest extends \PHPUnit_Framework_TestCase
      */
     public function itShouldThrowIfAdminLabelIsSpecifiedAsStoreScopeLabel()
     {
-        $this->setExpectedException(\RuntimeException::class);
+        $this->expectException(\RuntimeException::class);
 
         $this->optionSetup->addAttributeOptionIfNotExistsWithStoreLabels(
             'entity_type',
@@ -133,7 +144,7 @@ class EavOptionSetupTest extends \PHPUnit_Framework_TestCase
      */
     public function itShouldThrowAnExceptionIfANonNumericStoreIdWasSpecified()
     {
-        $this->setExpectedException(\RuntimeException::class);
+        $this->expectException(\RuntimeException::class);
 
         $this->optionSetup->addAttributeOptionIfNotExistsWithStoreLabels(
             'entity_type',
@@ -148,7 +159,7 @@ class EavOptionSetupTest extends \PHPUnit_Framework_TestCase
      */
     public function itShouldThrowAnExceptionIfTheAttributeIsNotKnown()
     {
-        $this->setExpectedException(\RuntimeException::class);
+        $this->expectException(\RuntimeException::class);
         $this->mockAttributeRepository->method('get')->willThrowException(new \Exception('Test Exception'));
         $this->optionSetup->addAttributeOptionIfNotExists(
             'entity_type',
@@ -163,7 +174,7 @@ class EavOptionSetupTest extends \PHPUnit_Framework_TestCase
      */
     public function itShouldThrowAnExceptionIfTheRepositoryReturnsAnUnexpectedResult($returnValue)
     {
-        $this->setExpectedException(\RuntimeException::class);
+        $this->expectException(\RuntimeException::class);
         $this->mockAttributeRepository->method('get')->willReturn($returnValue);
         $this->optionSetup->addAttributeOptionIfNotExists(
             'entity_type',
@@ -177,7 +188,7 @@ class EavOptionSetupTest extends \PHPUnit_Framework_TestCase
         return [
             'null' => [null],
             'string' => ['a string'],
-            'empty attribute' => [$this->getMock(AttributeInterface::class)]
+            'empty attribute' => [$this->createMock(AttributeInterface::class)]
         ];
     }
 
@@ -186,7 +197,7 @@ class EavOptionSetupTest extends \PHPUnit_Framework_TestCase
      */
     public function itShouldNotAddKnownAttributeOptions()
     {
-        $mockAttribute = $this->getMock(AttributeInterface::class);
+        $mockAttribute = $this->createMock(AttributeInterface::class);
         $mockAttribute->method('getAttributeId')->willReturn(111);
 
         $this->mockAttributeRepository->method('get')->willReturn($mockAttribute);
@@ -211,7 +222,7 @@ class EavOptionSetupTest extends \PHPUnit_Framework_TestCase
         $this->setSpecifiedAttributeExistsFixture();
 
         $this->mockAttributeOptionFactory->method('create')->willReturn(
-            $this->getMock(AttributeOptionInterface::class)
+            $this->createMock(AttributeOptionInterface::class)
         );
 
         $this->mockAttributeOptionManagementService->method('getItems')
@@ -236,7 +247,7 @@ class EavOptionSetupTest extends \PHPUnit_Framework_TestCase
         $this->expectNewOptionWithStoreLabelToBeCreated();
 
         $this->mockAttributeOptionLabelFactory->method('create')->willReturn(
-            $this->getMock(AttributeOptionLabelInterface::class)
+            $this->createMock(AttributeOptionLabelInterface::class)
         );
 
         $this->mockAttributeOptionManagementService->method('getItems')
@@ -265,7 +276,7 @@ class EavOptionSetupTest extends \PHPUnit_Framework_TestCase
         $this->setSpecifiedAttributeExistsFixture();
 
         $this->mockAttributeOptionFactory->method('create')->willReturn(
-            $this->getMock(AttributeOptionInterface::class)
+            $this->createMock(AttributeOptionInterface::class)
         );
 
         $this->mockAttributeOptionManagementService->method('getItems')
@@ -277,34 +288,6 @@ class EavOptionSetupTest extends \PHPUnit_Framework_TestCase
 
         $this->mockAppState->expects($this->once())->method('setAreaCode');
 
-        $this->optionSetup->addAttributeOptionIfNotExists('entity_code', 'attribute_code', 'Option 4');
-
-    }
-
-    /**
-     * @test
-     */
-    public function itShouldTryToSetTheAdminScopeAsAWorkaroundForIssue1405EvenIfAnAreaIsAlreadySet()
-    {
-        $this->setSpecifiedAttributeExistsFixture();
-
-        $this->mockAttributeOptionFactory->method('create')->willReturn(
-            $this->getMock(AttributeOptionInterface::class)
-        );
-
-        $this->mockAttributeOptionManagementService->method('getItems')
-            ->willReturn([
-                $this->createMockOptionLabel('Option 1', 100),
-                $this->createMockOptionLabel('Option 2', 200),
-                $this->createMockOptionLabel('Option 3', 300),
-            ]);
-
-        $this->mockAppState->expects($this->once())->method('setAreaCode')->willThrowException(
-            new LocalizedException($this->getMock(Phrase::class, [], ['Test Exception']))
-        );
-
-        $this->mockAttributeOptionManagementService->expects($this->once())->method('add');
-        
         $this->optionSetup->addAttributeOptionIfNotExists('entity_code', 'attribute_code', 'Option 4');
 
     }

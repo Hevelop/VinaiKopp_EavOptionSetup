@@ -198,7 +198,6 @@ class EavOptionSetup
      */
     private function addAttributeOption($defaultLabel, array $storeScopeLabels)
     {
-        $this->workaroundIssue1405();
         $this->attrOptionManagementService->add(
             $this->attribute->getEntityTypeId(),
             $this->attribute->getAttributeCode(),
@@ -254,18 +253,6 @@ class EavOptionSetup
         return array_reduce($this->attrOptionList, function ($max, AttributeOption $option) {
             return max($max, $option->getSortOrder());
         }, 0);
-    }
-
-    /**
-     * Reference https://github.com/magento/magento2/issues/1405
-     * Remove this method once the issue is resolved that calling an Api Interface
-     * method from a Module Install triggers Exception that Area Code is not set
-     */
-    private function workaroundIssue1405()
-    {
-        if (!$this->appState->getAreaCode()) {
-            $this->appState->setAreaCode('adminhtml');
-        }
     }
 
     /**
